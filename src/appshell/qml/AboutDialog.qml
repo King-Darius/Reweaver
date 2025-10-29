@@ -127,8 +127,7 @@ StyledDialogView {
             StyledTextLabel {
                 Layout.fillWidth: true
 
-                text: qsTrc("appshell/about", "For privacy information, see our <a href=\"%1\">privacy policy</a>.")
-                      .arg(aboutModel.museScorePrivacyPolicyUrl().url)
+                text: qsTrc("appshell/about", "Reweaver operates entirely offline. No telemetry, update checks, or crash uploads occur automatically.")
 
                 wrapMode: Text.WordWrap
                 maximumLineCount: 3

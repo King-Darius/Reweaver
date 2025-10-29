@@ -26,16 +26,12 @@
 #include <wx/textctrl.h>
 #include <wx/bmpbuttn.h>
 
-#include "AccessibleLinksFormatter.h"
 #include "AllThemeResources.h"
 #include "Theme.h"
 #include "HelpText.h"
 #include "Prefs.h"
 #include "ShuttleGui.h"
 #include "HelpSystem.h"
-
-#include "SentryReport.h"
-#include "CodeConversions.h"
 
 namespace {
 // wxWidgets set an inaccessible border for the wxCollapsiblePane
@@ -55,12 +51,7 @@ int GetCollapsiblePaneBorder(wxWindow* root)
 }
 }
 
-constexpr int MaxUserCommentLength = 2000;
-constexpr bool ErrorReportDialogHasUserComment = false;
-
 BEGIN_EVENT_TABLE(ErrorReportDialog, wxDialogWrapper)
-EVT_BUTTON(wxID_YES, ErrorReportDialog::OnSend)
-EVT_BUTTON(wxID_NO, ErrorReportDialog::OnDontSend)
 EVT_BUTTON(wxID_HELP, ErrorReportDialog::OnHelp)
 END_EVENT_TABLE()
 
@@ -72,16 +63,8 @@ ErrorReportDialog::ErrorReportDialog(
         parent, wxID_ANY, dlogTitle, wxDefaultPosition, wxDefaultSize,
         wxDEFAULT_DIALOG_STYLE)
     , mHelpUrl(helpUrl)
-    , mIsModal(modal)
 {
-    audacity::sentry::Exception ex = audacity::sentry::Exception::Create(
-        audacity::ToUTF8(dlogTitle.Debug()), message.Debug());
-
-    if (!log.empty()) {
-        ex.AddData("log", log);
-    }
-
-    mReport = std::make_unique<audacity::sentry::Report>(ex);
+    wxUnusedVar(modal);
 
     ShuttleGui S(this, eIsCreating);
 
@@ -136,35 +119,16 @@ ErrorReportDialog::ErrorReportDialog(
 
                     S.AddSpace(0, 20);
 
-                    /* i18n-hint: %s is replaced with "here" */
-                    AccessibleLinksFormatter errorpage(
-                        XO("More information about this error may be available %s."));
-
-                    errorpage.FormatLink(
-                        /* i18n-hint: Title of hyperlink to audacityteam.org/errors. */
-                        wxT("%s"),
-                        XO("here"),
-                        "https://audacityteam.org/errors");
-                    errorpage.Populate(S);
-
                     S.AddSpace(0, 12);
-                    S.AddVariableText(XO(
-                                          "Would you like to send a report to help us fix this issue?"))
+                    S.AddVariableText(
+                        XO("Reweaver keeps crash diagnostics on your device. Nothing will be transmitted automatically."))
                     ->SetFont(textFont);
 
                     S.AddSpace(0, 6);
 
-                    /* i18n-hint: %s will be replaced with "our Privacy Policy" */
-                    AccessibleLinksFormatter privacyPolicy(
-                        XO("All reports are anonymous. See %s for more info."));
-
-                    privacyPolicy.FormatLink(
-                        /* i18n-hint: Title of hyperlink to the privacy policy. This is an object of "See". */
-                        wxT("%s"),
-                        XO("our Privacy Policy"),
-                        "https://www.audacityteam.org/about/desktop-privacy-notice/");
-
-                    privacyPolicy.Populate(S);
+                    S.AddVariableText(
+                        XO("You may copy the information below if you want to share it with someone you trust."))
+                    ->SetFont(textFont);
                 }
                 S.EndVerticalLay();
             }
@@ -189,22 +153,7 @@ ErrorReportDialog::ErrorReportDialog(
                         wxTE_RICH | wxTE_READONLY | wxTE_MULTILINE | wxTE_DONTWRAP)
                     .MinSize(wxSize(0, 152))
                     .Name(XO("Problem details"))
-                    .AddTextBox({}, mReport->GetReportPreview(), 0);
-
-                    if constexpr (ErrorReportDialogHasUserComment) {
-                        SI.AddSpace(0, 20);
-
-                        SI.AddVariableText(XO("Comments"))->SetFont(textFont);
-
-                        SI.AddSpace(0, 6);
-
-                        mCommentsControl = SI.Style(wxTE_MULTILINE)
-                                           .MinSize(wxSize(0, 76))
-                                           .Name(XO("Comments"))
-                                           .AddTextBox({}, {}, 0);
-
-                        mCommentsControl->SetMaxLength(MaxUserCommentLength);
-                    }
+                    .AddTextBox({}, log, 0);
                 }
                 SI.EndVerticalLay();
             }
@@ -224,11 +173,7 @@ ErrorReportDialog::ErrorReportDialog(
 
                 S.AddSpace(0, 0, 1);
 
-                S.Id(wxID_NO).AddButton(XC("&Don't send", "crash reporter button"));
-
-                S.AddSpace(13, 0);
-
-                S.Id(wxID_YES).AddButton(XC("&Send", "crash reporter button"));
+                S.Id(wxID_OK).AddButton(XO("&OK"));
             }
             S.EndHorizontalLay();
 
@@ -246,31 +191,6 @@ ErrorReportDialog::ErrorReportDialog(
     GetSizer()->Fit(this);
     SetMinSize(GetSize());
     Center();
-}
-
-ErrorReportDialog::~ErrorReportDialog()
-{
-}
-
-void ErrorReportDialog::OnSend(wxCommandEvent& event)
-{
-    Disable();
-
-    if (mCommentsControl != nullptr) {
-        mReport->AddUserComment(audacity::ToUTF8(mCommentsControl->GetValue()));
-    }
-
-    mReport->Send(
-        [this](int code, std::string body) {
-        CallAfter([this]() {
-            EndModal(true);
-        });
-    });
-}
-
-void ErrorReportDialog::OnDontSend(wxCommandEvent& event)
-{
-    EndModal(true);
 }
 
 void ErrorReportDialog::OnHelp(wxCommandEvent& event)

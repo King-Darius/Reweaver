@@ -18,18 +18,7 @@
 
 #include "wxPanelWrapper.h" // to inherit
 
-namespace audacity {
-namespace sentry {
-class Report;
-}
-}
-
-class wxTextCtrl;
-
-//! A dialog, that has "Send", "Don't send" and help buttons.
-/*! This dialog is used in place of error dialogs for Audacity errors
-    when Sentry reporting is enabled.
-*/
+//! A dialog that presents error details without sending any data.
 class ErrorReportDialog final : public wxDialogWrapper
 {
 public:
@@ -37,21 +26,12 @@ public:
         wxWindow* parent, const TranslatableString& dlogTitle, const TranslatableString& message, const ManualPageID& helpUrl,
         const wxString& log, const bool modal);
 
-    ~ErrorReportDialog();
+    ~ErrorReportDialog() override = default;
 
 private:
-    void OnSend(wxCommandEvent& event);
-    void OnDontSend(wxCommandEvent& event);
-
     void OnHelp(wxCommandEvent& event);
 
-    std::unique_ptr<audacity::sentry::Report> mReport;
-
     ManualPageID mHelpUrl;
-
-    wxTextCtrl* mCommentsControl { nullptr };
-
-    bool mIsModal;
 
     DECLARE_EVENT_TABLE()
 };
