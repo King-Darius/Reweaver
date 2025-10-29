@@ -39,25 +39,19 @@ BaseSection {
         id: needCheckBox
         width: parent.width
 
-        text: qsTrc("appshell/preferences", "Check to see if a new version of MuseScore is available")
+        text: qsTrc("appshell/preferences", "Automatic update checks are disabled in Reweaver")
 
-        visible: root.isAppUpdatable
+        visible: false
 
         navigation.name: "NeedCheckBox"
         navigation.panel: root.navigation
         navigation.row: 0
-
-        onClicked: {
-            root.needCheckForNewAppVersionChangeRequested(!checked)
-        }
     }
 
     StyledTextLabel {
         width: parent.width
 
-        text: qsTrc("appshell/preferences", "Update checking requires network access. In order to protect your privacy, MuseScore does not store any personal information. See our <a href=\"%1\">privacy policy</a> for more info.")
-              .arg(root.museScorePrivacyPolicyUrl)
-              .replace("\n", "<br>")
+        text: qsTrc("appshell/preferences", "Reweaver does not make network requests to look for updates. Check trusted sources manually whenever you prefer.")
 
         horizontalAlignment: Qt.AlignLeft
         wrapMode: Text.WordWrap

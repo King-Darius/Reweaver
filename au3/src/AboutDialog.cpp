@@ -798,18 +798,10 @@ void AboutDialog::PopulateLicensePage(ShuttleGui& S)
         S.AddVariableText(XC("PRIVACY POLICY", "about dialog"), true);
 
         S.AddFixedText(
-            XO("App update checking and error reporting require network access. "
-               "These features are optional."));
+            XO("Reweaver runs entirely offline. No telemetry, update checks, or crash uploads are ever started automatically."));
 
-        /* i18n-hint: %s will be replaced with "our Privacy Policy" */
-        AccessibleLinksFormatter privacyPolicy(XO("See %s for more info."));
-
-        privacyPolicy.FormatLink(
-            /* i18n-hint: Title of hyperlink to the privacy policy. This is an object of "See". */
-            wxT("%s"), XO("our Privacy Policy"),
-            "https://www.audacityteam.org/about/desktop-privacy-notice/");
-
-        privacyPolicy.Populate(S);
+        S.AddFixedText(
+            XO("Crash diagnostics remain on your device unless you choose to share them manually."));
     }
     S.EndPanel();
 

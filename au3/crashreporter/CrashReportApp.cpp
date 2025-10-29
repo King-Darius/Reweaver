@@ -1,15 +1,14 @@
 #include "CrashReportApp.h"
 
-#include <sstream>
 #include <memory>
+#include <vector>
 
 #include <wx/cmdline.h>
 #include <wx/chartype.h>
 #include <wx/artprov.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
-#include <wx/wrapsizer.h>
-#include <wx/hyperlink.h>
+#include <wx/filefn.h>
 
 #include "google_breakpad/processor/basic_source_line_resolver.h"
 #include "google_breakpad/processor/minidump_processor.h"
@@ -21,154 +20,8 @@
 
 #include <Internat.h>
 
-#if defined(_WIN32)
-#include <locale>
-#include <codecvt>
-#include "client/windows/sender/crash_report_sender.h"
-
-namespace {
-std::wstring ToPlatformString(const std::string& utf8)
-{
-    return std::wstring_convert<std::codecvt_utf8<std::wstring::traits_type::char_type>, std::wstring::traits_type::char_type>().from_bytes(
-        utf8);
-}
-
-bool SendMinidump(const std::string& url, const wxString& minidumpPath, const std::map<std::string, std::string>& arguments,
-                  const wxString& commentsFilePath)
-{
-    std::map<std::wstring, std::wstring> files;
-    files[L"upload_file_minidump"] = minidumpPath.wc_str();
-    if (!commentsFilePath.empty()) {
-        files[wxFileName(commentsFilePath).GetFullName().wc_str()] = commentsFilePath.wc_str();
-    }
-
-    std::map<std::wstring, std::wstring> parameters;
-    for (auto& p : arguments) {
-        parameters[ToPlatformString(p.first)] = ToPlatformString(p.second);
-    }
-
-    google_breakpad::CrashReportSender sender(L"");
-
-    auto result = sender.SendCrashReport(
-        ToPlatformString(url),
-        parameters,
-        files,
-        nullptr
-        );
-    return result == google_breakpad::RESULT_SUCCEEDED;
-}
-}
-#else
-
-#include "common/linux/http_upload.h"
-
-namespace {
-bool SendMinidump(const std::string& url, const wxString& minidumpPath, const std::map<std::string, std::string>& arguments,
-                  const wxString& commentsFilePath)
-{
-    std::map<std::string, std::string> files;
-    files["upload_file_minidump"] = minidumpPath.ToStdString();
-    if (!commentsFilePath.empty()) {
-        files["comments.txt"] = commentsFilePath.ToStdString();
-    }
-
-    std::string response, error;
-    bool success = google_breakpad::HTTPUpload::SendRequest(
-        url,
-        arguments,
-        files,
-        std::string(),
-        std::string(),
-        std::string(),
-        &response,
-        NULL,
-        &error);
-
-    return success;
-}
-}
-
-#endif
-
-constexpr bool CrashReportAppHasUserComment = false;
-
 IMPLEMENT_APP(CrashReportApp);
 namespace {
-std::map<std::string, std::string> parseArguments(const std::string& str)
-{
-    int TOKEN_IDENTIFIER{ 0 };
-    constexpr int TOKEN_EQ{ 1 };
-    constexpr int TOKEN_COMMA{ 2 };
-    constexpr int TOKEN_VALUE{ 3 };
-
-    int i = 0;
-
-    std::string key;
-    int state = TOKEN_COMMA;
-    std::map<std::string, std::string> result;
-    while (true)
-    {
-        if (str[i] == 0) {
-            break;
-        } else if (isspace(str[i])) {
-            ++i;
-        } else if (isalpha(str[i])) {
-            if (state != TOKEN_COMMA) {
-                throw std::logic_error("malformed parameters string: unexpected identifier");
-            }
-
-            int begin = i;
-            while (isalnum(str[i]) || str[i] == '[' || str[i] == ']') {
-                ++i;
-            }
-
-            key = str.substr(begin, i - begin);
-            state = TOKEN_IDENTIFIER;
-        } else if (str[i] == '=') {
-            if (state != TOKEN_IDENTIFIER) {
-                throw std::logic_error("malformed parameters string: unexpected '=' symbol");
-            }
-            ++i;
-            state = TOKEN_EQ;
-        } else if (str[i] == '\"') {
-            if (state != TOKEN_EQ) {
-                throw std::logic_error("malformed parameters string: unexpected '\"' symbol");
-            }
-
-            int begin = ++i;
-            while (true)
-            {
-                if (str[i] == 0) {
-                    throw std::logic_error("unterminated string literal");
-                } else if (str[i] == '\"') {
-                    if (i > begin) {
-                        result[key] = str.substr(begin, i - begin);
-                    } else {
-                        result[key] = std::string();
-                    }
-                    ++i;
-                    state = TOKEN_VALUE;
-                    break;
-                }
-                ++i;
-            }
-        } else if (str[i] == ',') {
-            if (state != TOKEN_VALUE) {
-                throw std::logic_error("malformed parameters string: unexpected ',' symbol");
-            }
-            state = TOKEN_COMMA;
-            ++i;
-        } else {
-            throw std::logic_error("malformed parameters string");
-        }
-    }
-    if (state != TOKEN_VALUE) {
-        throw std::logic_error("malformed parameters string");
-    }
-
-    return result;
-}
-
 void PrintMinidump(google_breakpad::Minidump& minidump)
 {
     google_breakpad::BasicSourceLineResolver resolver;
@@ -232,20 +85,17 @@ wxString MakeHeaderString(google_breakpad::Minidump& minidump)
     return _("Unknown error");
 }
 
-void DoShowCrashReportFrame(const wxString& header, const wxString& dump, const std::function<bool(const wxString& comment)>& onSend)
+void DoShowCrashReportFrame(const wxString& header, const wxString& dump)
 {
-    static constexpr int MaxUserCommentLength = 2000;
-
     auto dialog = new wxDialog(
         nullptr,
         wxID_ANY,
-        _("Problem Report for Audacity"),
+        _("Problem Report for Reweaver"),
         wxDefaultPosition,
         wxDefaultSize,
-        wxDEFAULT_FRAME_STYLE & ~(wxRESIZE_BORDER | wxMAXIMIZE_BOX)    //disable frame resize
+        wxDEFAULT_FRAME_STYLE & ~(wxRESIZE_BORDER | wxMAXIMIZE_BOX)
         );
 
-    //fixes focus issue with Windows build-in screen reader, but breaks VoiceOver
 #if defined(__WXMSW__)
     dialog->SetFocus();
 #endif
@@ -261,111 +111,58 @@ void DoShowCrashReportFrame(const wxString& header, const wxString& dump, const 
     headerLayout->Add(headerText, wxSizerFlags().Align(wxALIGN_CENTER_VERTICAL));
 
     mainLayout->Add(headerLayout, wxSizerFlags().Border(wxALL));
-    if (onSend != nullptr) {
-        mainLayout->AddSpacer(5);
-        mainLayout->Add(new wxStaticText(dialog, wxID_ANY,
-                                         _("Click \"Send\" to submit the report to Audacity. This information is collected anonymously.")),
-                        wxSizerFlags().Border(wxALL));
-    }
+    mainLayout->AddSpacer(5);
+
+    auto privacyMessage = new wxStaticText(
+        dialog,
+        wxID_ANY,
+        _("Reweaver keeps crash diagnostics on your device. No information is transmitted automatically."));
+    privacyMessage->Wrap(480);
+    mainLayout->Add(privacyMessage, wxSizerFlags().Border(wxLEFT | wxRIGHT));
+
+    mainLayout->AddSpacer(5);
+
+    auto deletionMessage = new wxStaticText(
+        dialog,
+        wxID_ANY,
+        _("The temporary minidump has been removed. You may copy the details below if you wish to share them manually."));
+    deletionMessage->Wrap(480);
+    mainLayout->Add(deletionMessage, wxSizerFlags().Border(wxLEFT | wxRIGHT));
+
     mainLayout->AddSpacer(10);
     mainLayout->Add(new wxStaticText(dialog, wxID_ANY, _("Problem details")), wxSizerFlags().Border(wxALL));
 
-    auto dumpTextCtrl = new wxTextCtrl(dialog, wxID_ANY, dump, wxDefaultPosition, wxSize(500,
-                                                                                         300),
-                                       wxTE_RICH | wxTE_READONLY | wxTE_MULTILINE | wxTE_DONTWRAP);
+    auto dumpTextCtrl = new wxTextCtrl(
+        dialog,
+        wxID_ANY,
+        dump,
+        wxDefaultPosition,
+        wxSize(500, 300),
+        wxTE_RICH | wxTE_READONLY | wxTE_MULTILINE | wxTE_DONTWRAP);
     dumpTextCtrl->SetFont(wxFont(wxFontInfo().Family(wxFONTFAMILY_TELETYPE)));
-    dumpTextCtrl->ShowPosition(0);    //scroll to top
+    dumpTextCtrl->ShowPosition(0);
     mainLayout->Add(dumpTextCtrl, wxSizerFlags().Border(wxALL).Expand());
 
     auto buttonsLayout = new wxBoxSizer(wxHORIZONTAL);
 
-    wxTextCtrl* commentCtrl = nullptr;
-
-    if (onSend != nullptr && CrashReportAppHasUserComment) {
-        mainLayout->AddSpacer(10);
-        mainLayout->Add(new wxStaticText(dialog, wxID_ANY, _("Comments")), wxSizerFlags().Border(wxALL));
-
-        commentCtrl = new wxTextCtrl(dialog, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(500, 100), wxTE_MULTILINE);
-        commentCtrl->SetMaxLength(MaxUserCommentLength);
-
-        mainLayout->Add(commentCtrl, wxSizerFlags().Border(wxALL).Expand());
-    }
-
-    if (onSend != nullptr) {
-        /* i18n-hint: %s will be replaced with "our Privacy Policy" */
-        const wxString translatedText = _("See %s for more info.");
-
-        /* i18n-hint: Title of hyperlink to the privacy policy. This is an
-           object of "See". */
-        const wxString translatedLink = _("our Privacy Policy");
-
-        const size_t placeholderPosition = translatedText.Find(wxT("%s"));
-
-        if (placeholderPosition != wxString::npos) {
-            auto privacyPolicyLayout = new wxWrapSizer();
-
-            privacyPolicyLayout->Add(
-                new wxStaticText(dialog, wxID_ANY, translatedText.substr(0, placeholderPosition)),
-                wxSizerFlags().Proportion(0).Border(wxUP | wxDOWN));
-
-            privacyPolicyLayout->Add(
-                new wxHyperlinkCtrl(
-                    dialog, wxID_ANY, translatedLink,
-                    "https://www.audacityteam.org/about/desktop-privacy-notice/"),
-                wxSizerFlags().Proportion(0).Border(wxUP | wxDOWN));
-
-            if (placeholderPosition + 2 < translatedText.Length()) {
-                privacyPolicyLayout->Add(
-                    new wxStaticText(
-                        dialog, wxID_ANY,
-                        translatedText.substr(placeholderPosition + 2)),
-                    wxSizerFlags().Proportion(1).Border(wxUP | wxDOWN));
-            }
-
-            mainLayout->Add(
-                privacyPolicyLayout, wxSizerFlags().Border(wxALL));
-        }
-
-        auto dontSendButton = new wxButton(dialog, wxID_ANY, XC("&Don't send", "crash reporter button").Translation());
-        auto sendButton = new wxButton(dialog, wxID_ANY, XC("&Send", "crash reporter button").Translation());
-
-        dontSendButton->Bind(wxEVT_BUTTON, [dialog](wxCommandEvent&)
-        {
-            dialog->Close(true);
-        });
-        sendButton->Bind(wxEVT_BUTTON, [dialog, commentCtrl, onSend](wxCommandEvent&)
-        {
-            const wxString comment
-                =commentCtrl != nullptr
-                  ? commentCtrl->GetValue()
-                  : wxString {};
-
-            if (onSend(comment)) {
-                dialog->Close(true);
-            }
-        });
-
-        buttonsLayout->Add(dontSendButton);
-        buttonsLayout->AddSpacer(5);
-        buttonsLayout->Add(sendButton);
-    } else {
-        auto okButton = new wxButton(dialog, wxID_OK, wxT("OK"));
-        okButton->Bind(wxEVT_BUTTON, [dialog](wxCommandEvent&)
-        {
-            dialog->Close(true);
-        });
-        buttonsLayout->Add(okButton);
-    }
+    auto okButton = new wxButton(dialog, wxID_OK, wxT("OK"));
+    okButton->Bind(wxEVT_BUTTON, [dialog](wxCommandEvent&)
+    {
+        dialog->Close(true);
+    });
+    buttonsLayout->Add(okButton);
 
     mainLayout->Add(buttonsLayout, wxSizerFlags().Border(wxALL).Align(wxALIGN_RIGHT));
     dialog->SetSizerAndFit(mainLayout);
 
-    dialog->Bind(wxEVT_CLOSE_WINDOW, [dialog](wxCloseEvent&) {
+    dialog->Bind(wxEVT_CLOSE_WINDOW, [dialog](wxCloseEvent&)
+    {
         dialog->Destroy();
     });
 
     dialog->Show(true);
 }
+
 }
 
 bool CrashReportApp::OnInit()
@@ -374,52 +171,58 @@ bool CrashReportApp::OnInit()
         return false;
     }
 
-    if (mSilent) {
-        if (!mURL.empty()) {
-            SendMinidump(mURL, mMinidumpPath, mArguments, wxEmptyString);
-        }
-    } else {
-        static std::unique_ptr<wxLocale> sLocale(new wxLocale(wxLANGUAGE_DEFAULT));
+    static std::unique_ptr<wxLocale> sLocale(new wxLocale(wxLANGUAGE_DEFAULT));
 #if defined(__WXOSX__)
-        sLocale->AddCatalogLookupPathPrefix(wxT("../Resources"));
+    sLocale->AddCatalogLookupPathPrefix(wxT("../Resources"));
 #elif defined(__WXMSW__)
-        sLocale->AddCatalogLookupPathPrefix(wxT("Languages"));
+    sLocale->AddCatalogLookupPathPrefix(wxT("Languages"));
 #elif defined(__WXGTK__)
-        sLocale->AddCatalogLookupPathPrefix(wxT("./locale"));
-        sLocale->AddCatalogLookupPathPrefix(wxString::Format(wxT("%s/share/locale"), wxT(INSTALL_PREFIX)));
+    sLocale->AddCatalogLookupPathPrefix(wxT("./locale"));
+    sLocale->AddCatalogLookupPathPrefix(wxString::Format(wxT("%s/share/locale"), wxT(INSTALL_PREFIX)));
 #endif
-        sLocale->AddCatalog("audacity");
-        sLocale->AddCatalog("wxstd");
+    sLocale->AddCatalog("audacity");
+    sLocale->AddCatalog("wxstd");
 
-        google_breakpad::Minidump minidump(mMinidumpPath.ToStdString(), false);
-        if (minidump.Read()) {
-            SetExitOnFrameDelete(true);
-
-            wxFileName temp(mMinidumpPath);
-            temp.SetExt("tmp");
-
-            try
-            {
-                ShowCrashReport(MakeHeaderString(minidump), MakeDumpString(minidump, temp.GetFullPath()));
-            }
-            catch (std::exception& e)
-            {
-                wxMessageBox(e.what());
-                return false;
-            }
-            return true;
-        }
+    google_breakpad::Minidump minidump(mMinidumpPath.ToStdString(), false);
+    if (!minidump.Read()) {
+        return false;
     }
-    return false;
+
+    wxFileName temp(mMinidumpPath);
+    temp.SetExt("tmp");
+
+    wxString header;
+    wxString details;
+    try
+    {
+        header = MakeHeaderString(minidump);
+        details = MakeDumpString(minidump, temp.GetFullPath());
+    }
+    catch (std::exception& e)
+    {
+        wxMessageBox(e.what());
+        return false;
+    }
+
+    if (wxFileExists(mMinidumpPath)) {
+        wxRemoveFile(mMinidumpPath);
+    }
+
+    if (mSilent) {
+        wxPrintf("%s\n\n%s\n", header, details);
+        return false;
+    }
+
+    SetExitOnFrameDelete(true);
+    ShowCrashReport(header, details);
+    return true;
 }
 
 void CrashReportApp::OnInitCmdLine(wxCmdLineParser& parser)
 {
     static const wxCmdLineEntryDesc cmdLineEntryDesc[] =
     {
-        { wxCMD_LINE_SWITCH, "s", "silent", "Send without displaying the confirmation dialog" },
-        { wxCMD_LINE_OPTION, "u", "url", "Crash report server URL", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
-        { wxCMD_LINE_OPTION, "a", "args", "A set of arguments to send", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
+        { wxCMD_LINE_SWITCH, "s", "silent", "Process the minidump without opening the user interface" },
         { wxCMD_LINE_PARAM,  NULL, NULL, "path to minidump file", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY },
         { wxCMD_LINE_NONE }
     };
@@ -431,22 +234,6 @@ void CrashReportApp::OnInitCmdLine(wxCmdLineParser& parser)
 
 bool CrashReportApp::OnCmdLineParsed(wxCmdLineParser& parser)
 {
-    wxString url;
-    wxString arguments;
-    if (parser.Found("u", &url)) {
-        mURL = url.ToStdString();
-    }
-    if (parser.Found("a", &arguments)) {
-        try
-        {
-            mArguments = parseArguments(arguments.ToStdString());
-        }
-        catch (std::exception& e)
-        {
-            wxMessageBox(e.what());
-            return false;
-        }
-    }
     mMinidumpPath = parser.GetParam(0);
     mSilent = parser.Found("s");
 
@@ -455,33 +242,5 @@ bool CrashReportApp::OnCmdLineParsed(wxCmdLineParser& parser)
 
 void CrashReportApp::ShowCrashReport(const wxString& header, const wxString& text)
 {
-    if (mURL.empty()) {
-        DoShowCrashReportFrame(header, text, nullptr);
-    } else {
-        DoShowCrashReportFrame(header, text, [this](const wxString& comments)
-        {
-            wxString commentsFilePath;
-            if (!comments.empty()) {
-                wxFileName temp(mMinidumpPath);
-                temp.SetName(temp.GetName() + "-comments");
-                temp.SetExt("txt");
-                commentsFilePath = temp.GetFullPath();
-                wxFile file;
-                if (file.Open(commentsFilePath, wxFile::write)) {
-                    file.Write(comments);
-                    file.Close();
-                }
-            }
-
-            auto result = SendMinidump(mURL, mMinidumpPath, mArguments, commentsFilePath);
-            if (!commentsFilePath.empty()) {
-                wxRemoveFile(commentsFilePath);
-            }
-
-            if (!result) {
-                wxMessageBox(_("Failed to send crash report"));
-            }
-            return result;
-        });
-    }
+    DoShowCrashReportFrame(header, text);
 }

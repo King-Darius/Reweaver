@@ -33,10 +33,6 @@ set( SOURCES
     curl/CurlResponse.cpp
     curl/CurlResponseFactory.h
     curl/CurlResponseFactory.cpp
-    curl/CurlStringList.h
-    curl/CurlStringList.cpp
-    curl/CurlHandleManager.h
-    curl/CurlHandleManager.cpp
 )
 
 
@@ -45,8 +41,6 @@ set ( LIBRARIES
     lib-preferences-interface
     lib-concurrency-interface
 PRIVATE
-    CURL::libcurl
-    threadpool::threadpool
     lib-exceptions-interface
 )
 
