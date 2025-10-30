@@ -1,40 +1,36 @@
-There are several ways to contribute to Audacity:
+We are excited that you want to contribute to Reweaver! There are many ways to help:
 
 ## Developing
 
-Audacity is mostly coded in C++. You'll need to be at least somewhat comfortable in it to start contributing code.
+Reweaver is primarily written in modern C++. Familiarity with QML and Qt will also help when working on the new UI layer.
 
-If you want to develop Audacity:
+If you want to develop Reweaver:
 
-* Build instructions can be found in the BUILDING.md
-* [Coding standards](https://audacity.gitbook.io/dev/getting-started/coding-standards) and other info on the process can be found [in the dev resources](https://audacity.gitbook.io/dev/).
-* You will need to [sign the CLA](https://www.audacityteam.org/cla/) to contribute code.
-* If you need help, you can ask in the [Audacity dev discord](https://discord.gg/N3XKxzTrq3).
+* Start by reading the build instructions in [BUILDING.md](BUILDING.md).
+* Review our [engineering guidelines](https://github.com/Reweaver/Reweaver/wiki/Coding-standards) (coming soon). Until that wiki is published, follow the conventions you see in the existing code.
+* All contributors must sign the [Contributor License Agreement](https://github.com/Reweaver/Reweaver/wiki/Contributor-License-Agreement) before we can merge code.
+* Development discussions happen in [GitHub Discussions](https://github.com/Reweaver/Reweaver/discussions) and the community Matrix room linked in the README.
 
-### Developing Plug-ins
+### Developing plug-ins
 
-Audacity supports a wide variety of plug-in APIs, namely [Nyquist](https://manual.audacityteam.org/man/nyquist.html), LV2, Audio Units (macOS only) and VST2 effects. These plug-ins generally won't be shipped as part of Audacity, but they still may be a tremendous help for Audacity users.
+Reweaver supports a wide variety of plug-in APIs, including Nyquist, LV2, Audio Units (macOS only) and VST2 effects. Plug-ins are usually distributed separately from the main application, but they can still have a huge impact on the Reweaver community. Share your plug-ins in the Discussions board or the community chat so others can try them out.
 
-## Testing / Finding bugs
+## Testing & filing bugs
 
-You can download current development builds in the [Actions tab on Github](https://github.com/audacity/audacity/actions). These builds are tied to certain pull requests. As a rule of thumb: If it's not yet merged, report any broken things you find which might be a result of the pull request directly as a comment on the pull request. If the code has been merged, [make a new bug in the issue tracker](https://github.com/audacity/audacity/issues/new/choose).
+You can download development builds from the repository’s CI once they become available. Until then you can build the project locally. When reporting bugs:
 
-When reporting bugs, try to find the most general form of it. For example, if you encounter a bug when amplifying a clip 2 hours into a project, try to see if it also happens when you're using a different effect (Normalize, for example), and if it also happens if the clip is near the beginning.
-
-Bugs must be reproducible. If you can't find steps to reproduce a bug, try asking if you went wrong somewhere [in the Audacity forum](https://forum.audacityteam.org/) instead.
+* Include your operating system, compiler/toolchain and commit hash.
+* Share clear reproduction steps so we can triage issues quickly.
+* For regressions tied to an open pull request, comment directly on that PR. For everything else, open an issue using the [bug report template](https://github.com/Reweaver/Reweaver/issues/new/choose).
 
 ## Translating
 
-See [our translators page](https://www.audacityteam.org/community/translators/) for more information on how to translate Audacity.
+We plan to reuse the translation infrastructure that powered previous releases. If you are interested in helping translate Reweaver, please watch the repository for announcements—we will publish localization instructions soon.
 
-## Feedback & Feature requests
+## Feedback & feature requests
 
-If you have anything you think Audacity can do better, you can voice it in [the relevant section in the forum](https://forum.audacityteam.org/c/feedback-and-discussion-forum/adding-features-to-audacity/22). If you have a very concrete idea something in the code which should be added or changed, you can also [make an enhancement request in the issue tracker](https://github.com/audacity/audacity/issues/new/choose).
+We track feature ideas in [GitHub Discussions](https://github.com/Reweaver/Reweaver/discussions/categories/ideas) and in the issue tracker. Share your thoughts early so we can shape the roadmap together.
 
-## Supporting Users
+## Supporting users
 
-The most active Audacity user community can be found [in the forum](https://forum.audacityteam.org/), so if you want to help users with their problems, this would be the first stop.
-
-### Making video tutorials
-
-Video tutorials are very helpful to users, as they tend to be easier to follow than written instructions. When you make video tutorials, make sure to mention which version of Audacity you're using, so that users know what the problem might be should they stumble upon your tutorial after a few years and find that their version of Audacity does very different things to yours.
+Community support currently happens in [GitHub Discussions](https://github.com/Reweaver/Reweaver/discussions/categories/q-a) and the Matrix channel. If you create tutorials or walkthroughs, mention the Reweaver build you used so other users can follow along even as the project evolves rapidly.

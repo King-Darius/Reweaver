@@ -27,24 +27,17 @@ import Muse.UiComponents 1.0
 BaseSection {
     id: root
 
-    title: qsTrc("appshell/preferences", "Publish to MuseScore.com")
+    title: qsTrc("appshell/preferences", "Cloud publishing")
 
-    property alias alsoShareAudioCom: alsoShareAudioComCheckBox.checked
+    navigation.direction: NavigationPanel.Horizontal
 
-    signal alsoShareAudioComChangeRequested(bool share)
-
-    CheckBox {
-        id: alsoShareAudioComCheckBox
-
+    StyledTextLabel {
         width: parent.width
+        wrapMode: Text.WordWrap
 
-        text: qsTrc("appshell/preferences", "Always prompt to share on Audio.com after publishing to MuseScore.com")
-
-        navigation.name: "AlsoShareAudioComCheckBox"
-        navigation.panel: root.navigation
-
-        onClicked: {
-            root.alsoShareAudioComChangeRequested(!checked)
-        }
+        text: qsTrc("appshell/preferences",
+                     "Publishing to MuseScore.com has been disabled in Reweaver. "
+                     + "All sharing features stay inside your local projects until "
+                     + "new self-hosted services are available.")
     }
 }

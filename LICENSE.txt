@@ -1,4 +1,4 @@
-Audacity is released under the GNU General Public License version 3 (GPLv3). 
+Reweaver is released under the GNU General Public License version 3 (GPLv3).
 Individual source files may be available under other licenses as specified 
 in those files or an accompanying file. In particular, many source files are 
 available under GPL version 2 (GPLv2) or (at your option) any later version, 
