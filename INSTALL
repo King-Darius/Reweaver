@@ -1,6 +1,5 @@
 Compilation and install instructions
 
+The latest version of the build guide lives in https://github.com/Reweaver/Reweaver/blob/master/BUILDING.md
 
-Compilation instruction for Audacity is available at https://github.com/audacity/audacity/blob/master/BUILDING.md
-
-You can ask for help with compilation problems at: https://forum.audacityteam.org/c/programming-and-development/compiling-audacity/18
+If you run into issues compiling Reweaver, open a thread in https://github.com/Reweaver/Reweaver/discussions/new or stop by the community chat linked in the README.

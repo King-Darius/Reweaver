@@ -1,86 +1,71 @@
-# Building Audacity
+# Building Reweaver
 
-## NOTE: These instructions are work-in-progress and will be finalized closer to release of Audacity 4.
+> **Status:** These instructions will continue to evolve while we ship the first Reweaver release. Please report gaps or outdated details so we can keep the guide fresh.
 
-## Requirements & Dependencies
+## Requirements & dependencies
+
+You will need the following tooling:
 
 * Git
 * CMake
-* A package manager (tested: Choco on Windows, homebrew on macOS)
+* A package manager (tested: Chocolatey on Windows, Homebrew on macOS)
 * A CMake generator (tested: Ninja)
-* A C++ compiler (tested: MSVC on Windows, g++ on Linux)
-* Qt 6.9.1, 'Desktop' with 'Additional Libraries':
+* A C++ compiler (tested: MSVC on Windows, g++/clang on Linux)
+* Qt 6.9.1 "Desktop" with the optional modules:
   * Qt 5 Compatibility Module
   * Qt Network Authorization
   * Qt Shader Tools
   * Qt State Machines
 
+Large portions of Reweaver's stack are shared with MuseScore Studio, so their developer environment documentation remains a useful companion reference for the time being.
 
 ## Setup
 
-As large parts of Audacity 4 are based on MuseScore Studio, the general setup steps from it are applicable here too:
-
 1. [Set up a developer environment](https://github.com/musescore/MuseScore/wiki/Set-up-developer-environment)
 2. [Install Qt and Qt Creator](https://github.com/musescore/MuseScore/wiki/Install-Qt-and-Qt-Creator)
+3. Clone the Reweaver repository and submodules:
 
-### Get the Audacity source and its submodules
+   ```bash
+   git clone --recurse-submodules https://github.com/Reweaver/Reweaver.git
+   ```
 
-To get the source and submodules in one command, `git clone --recurse-submodules https://github.com/audacity/audacity.git` in the folder of your choice. See the [Github help](https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories) for more information. 
+## Get dependencies
 
-### Get dependencies
+If you haven't installed the dependencies listed above, now is the time to do so. Ninja will attempt to pull in additional dependencies automatically; if anything is missing you can inspect the scripts in `buildscripts/ci/<your OS>/` to mirror the CI environment.
 
-If you haven't installed the dependencies listed above, now is the time to do so. 
+> **Note:** The dependency list is still larger than we would like because of legacy pieces that have not yet been untangled from the MuseScore integration.
 
-Ninja should be able to handle the other dependencies, if it doesn't, the list may be inferred from the "setup" file in buildscripts/ci/{your OS}/. 
+## Add relevant tools to `PATH`
 
-NB: At the moment, the list is rather long due to MuseScore dependencies that have not yet been cleaned up.
-
-### Add relevant tools to PATH
-
-Git, CMake, Ninja, Package manager, Compiler and Qt should all be added to the PATH variable in your OS. Otherwise, you'll need to specify them in the CMakeCache later on.
+Ensure Git, CMake, Ninja, your package manager, compiler toolchain and Qt binaries are on your `PATH`. Otherwise you will need to specify explicit paths in the generated `CMakeCache`.
 
 ## Compiling
 
-### With QtCreator
+### With Qt Creator
 
-Using QtCreator to edit and compile the will provide the best intellisense and debugging support when interacting with QML. Nevertheless, debugging on Windows is slow, and if you mostly interact with the C++ code, you might want to other options, such as those listed below.
-
-To compile, just open CMakeLists.txt with QtCreator, configure the project with the auto-detected Qt kit, and hit Build.
+Qt Creator offers the best IntelliSense and debugging experience when working with QML. Open `CMakeLists.txt` in Qt Creator, configure the project with the auto-detected Qt kit, and hit **Build**. Debugging on Windows can be slow; if you primarily work in C++ you may prefer one of the command-line options below.
 
 ### From the command line
 
-Standard cmake building applies: 
+Standard CMake workflow applies:
 
-```
-# inside the audacity source:
-cmake -S . -B build/ [options]  # configure (first build only)
-cmake --build build/            # build (every build)
-cmake --install build/          # install (every successful build)
+```bash
+cmake -S . -B build/ [options]   # configure (first build only)
+cmake --build build/             # build (every build)
+cmake --install build/           # install (after successful builds)
 ```
 
 ### With Visual Studio (Windows only)
 
-Double-click the `generate_sln.bat` script in the root of the repository. This will generate a Visual Studio solution in the `build` directory and build the `install` target. Open the generated solution (./build/audacity.sln) in Visual Studio and press F5 to run Audacity.
+Double-click `generate_sln.bat` in the repository root. The script generates a Visual Studio solution in the `build` directory and builds the `install` target. Open `./build/audacity.sln` in Visual Studio and press **F5** to launch Reweaver (the solution name will change once the project rename propagates through CMake).
 
-### With VSCode (Windows only)
+### With VS Code
 
-TODO: generalize to other OSes
+> These steps currently focus on Windows. Contributions that document macOS and Linux workflows are welcome.
 
-Note: the default generator is Ninja. Have it installed, or change the "cmake.generator" value in `.vscode/settings.json` to something else (eg `Visual Studio 16 2019`).
+The default generator is Ninja. Install it ahead of time or adjust `"cmake.generator"` in `.vscode/settings.json`.
 
-#### Open the workspace
-One way of doing this is by executing Ctrl+Shift+P, and choosing "Open Workspace from File". Navigate to the root of the repository and select the `.vscode/audacity.code-workspace` file. Else, you can open the folder, then the workspace file, and click the "Open Workspace" button.
-
-#### Install recommended extensions
-When opening the repository in VSCode, you will be prompted to install recommended extensions. You can do it then. If you missed it, you can install them later by executing Ctrl+Shift+P, typing `Extensions: Show Recommended Extensions`, and installing the recommended extensions.
-
-You should only have to do this once.
-
-##### Configure and build install target
-
-Execute Ctrl+Shift+P and choose "CMake: Configure".
-
-#### Build and run audacity
-
-Just **press F5**. It will build and install everything the first time, but afterwards it should be very fast, especially if you're using Ninja `:)`.
-
+1. **Open the workspace.** Press `Ctrl`+`Shift`+`P` and choose “Open Workspace from File”. Select `.vscode/audacity.code-workspace` in the repository root (this will be renamed to match Reweaver in a future cleanup).
+2. **Install recommended extensions.** When VS Code loads the workspace it will prompt you to install recommended extensions. You can revisit this later via `Extensions: Show Recommended Extensions` in the command palette.
+3. **Configure and build the install target.** Execute `CMake: Configure` from the command palette.
+4. **Build and run Reweaver.** Press **F5**. The first run builds and installs everything; subsequent builds are significantly faster, especially when using Ninja.

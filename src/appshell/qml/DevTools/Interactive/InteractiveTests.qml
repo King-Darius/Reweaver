@@ -113,16 +113,6 @@ Rectangle {
         FlatButton {
             width: 200
             navigation.panel: navPanel
-            navigation.row: 6
-            text: "Open musescore.com"
-            onClicked: {
-                api.launcher.openUrl("https://musescore.com/")
-            }
-        }
-
-        FlatButton {
-            width: 200
-            navigation.panel: navPanel
             navigation.row: 7
             text: "Question"
             onClicked: testModel.question()

@@ -28,7 +28,6 @@
 
 #include "modularity/ioc.h"
 #include "iprojectconfiguration.h"
-#include "cloud/musescorecom/imusescorecomservice.h"
 
 namespace au::project {
 class CloudProjectsModel : public AbstractProjectsModel, public muse::async::Asyncable
@@ -36,7 +35,6 @@ class CloudProjectsModel : public AbstractProjectsModel, public muse::async::Asy
     Q_OBJECT
 
     muse::Inject<au::project::IProjectConfiguration> configuration;
-    muse::Inject<muse::cloud::IMuseScoreComService> museScoreComService;
 
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
     Q_PROPERTY(bool hasMore READ hasMore NOTIFY hasMoreChanged)
@@ -73,14 +71,7 @@ signals:
 private:
     void setState(State state);
 
-    void loadItemsIfNecessary();
-    bool needsLoading();
-
     State m_state = State::Fine;
-    bool m_isWaitingForPromise = false;
-
-    size_t m_totalItems = muse::nidx;
-
     int m_desiredRowCount = 0;
 };
 }
